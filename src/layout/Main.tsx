@@ -1,10 +1,9 @@
-/* eslint-disable */
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "bootstrap/dist/css/bootstrap.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./style.scss";
-import { LoadingController } from "../games/LoadingController";
+import { ModernLoadingController } from "../games/ModernLoadingController";
 
 export function Main() {
-  return <LoadingController />;
+  return <ModernLoadingController />;
 }

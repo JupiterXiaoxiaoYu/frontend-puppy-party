@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import background from "../../images/withdraw_frame.png";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import "./GiftboxPopup.css";
-import { AccountSlice } from "zkwasm-minirollup-browser";
+import { useWalletContext } from "zkwasm-minirollup-browser";
 import GiftboxConfirmButton from "../buttons/GiftboxConfirmButton";
 import giftbox_image from "../../images/animations/giftbox.png";
 import giftbox_bonus from "../../images/bonus.png";
@@ -27,7 +27,7 @@ import {
   UIState,
 } from "../../../data/ui";
 import { selectUserState } from "../../../data/state";
-import { sendTransaction } from "zkwasm-minirollup-browser/src/connect";
+import { sendTransaction } from "zkwasm-minirollup-browser";
 
 interface GiftboxNoteProps {
   startPosition: { x: number; y: number };
@@ -125,7 +125,7 @@ const GiftboxPopup = () => {
   const dispatch = useAppDispatch();
   const uIState = useAppSelector(selectUIState);
   const userState = useAppSelector(selectUserState);
-  const l2account = useAppSelector(AccountSlice.selectL2Account);
+  const { l2Account } = useWalletContext();
   const [rewardAnimation, setRewardAnimation] = useState(false);
   const [finishQuery, setFinishQuery] = useState(false);
   const parentRef = useRef<HTMLDivElement | null>(null);
@@ -154,7 +154,7 @@ const GiftboxPopup = () => {
       dispatch(
         sendTransaction(
           getLotteryransactionParameter(
-            l2account!,
+            l2Account!,
             BigInt(userState.player!.nonce)
           )
         )

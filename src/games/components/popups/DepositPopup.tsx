@@ -2,11 +2,10 @@ import { useState } from "react";
 import background from "../../images/deposit_frame.png";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import "./DepositPopup.css";
-import { AccountSlice } from "zkwasm-minirollup-browser";
+import { useWalletContext } from "zkwasm-minirollup-browser";
 import ConfirmButton from "../buttons/WithdrawConfirmButton";
 import CancelButton from "../buttons/WithdrawCancelButton";
 import {selectUIState, setPopupDescription, setUIState, UIState} from "../../../data/ui";
-import {depositAsync} from "zkwasm-minirollup-browser/src/reduxstate";
 
 function getFirst10Words(input: string): string {
   const words = input.split(/\s+/);
@@ -20,71 +19,54 @@ function getFirst10Words(input: string): string {
 const DepositPopup = () => {
   const dispatch = useAppDispatch();
   const uIState = useAppSelector(selectUIState);
-  const l2account = useAppSelector(AccountSlice.selectL2Account);
-  const l1account = useAppSelector(AccountSlice.selectL1Account);
+  const { l1Account, l2Account, deposit: walletDeposit } = useWalletContext();
   const [amountString, setAmountString] = useState("");
 
-  const deposit = (amount: string) => {
+  const handleDeposit = async (amount: string) => {
+    if (!l1Account || !l2Account) {
+      dispatch(setPopupDescription({
+        popupDescription: "Please connect your wallet first"
+      }));
+      dispatch(setUIState({ uIState: UIState.ErrorPopup }));
+      return;
+    }
+
     try {
       dispatch(setUIState({ uIState: UIState.QueryDeposit }));
-      dispatch(
-        AccountSlice.depositAsync({
-          tokenIndex: 0,
-          amount: Number(BigInt(amount)),
-          l2account: l2account!,
-          l1account: l1account!,
-        })
-      ).then((action) => {
-        if (depositAsync.fulfilled.match(action)) {
-          dispatch(setUIState({ uIState: UIState.Idle }));
-          //setErrorMessage("");
-        } else if (AccountSlice.depositAsync.rejected.match(action)) {
-          if (action.error.message == null) {
-            //setErrorMessage("Unknown Error.");
-          } else {
-            //setErrorMessage(action.error.message);
-          }
-        }
-
-        if (depositAsync.fulfilled.match(action)) {
-          dispatch(
-            setPopupDescription({
-              popupDescription: "Hash Number : (TBD)",
-            })
-          );
-          dispatch(setUIState({ uIState: UIState.ConfirmPopup }));
-        } else if (AccountSlice.depositAsync.rejected.match(action)) {
-          if (action.error.message == null) {
-            dispatch(
-              setPopupDescription({
-                popupDescription: "Unknown Error",
-              })
-            );
-          } else if (action.error.message.startsWith("user rejected action")) {
-            dispatch(
-              setPopupDescription({
-                popupDescription: "User rejected action",
-              })
-            );
-          } else {
-            dispatch(
-              setPopupDescription({
-                popupDescription:
-                  "Deposit Fail: " + getFirst10Words(action.error.message),
-              })
-            );
-          }
-          dispatch(setUIState({ uIState: UIState.ErrorPopup }));
-        }
+      
+      // 使用新的钱包上下文API进行存款
+      await walletDeposit({
+        tokenIndex: 0,
+        amount: parseFloat(amount),
       });
-    } catch (e) {
-      console.log("Error at deposit " + e);
+      
+      // 存款成功
+      dispatch(setPopupDescription({
+        popupDescription: "Deposit successful!",
+      }));
+      dispatch(setUIState({ uIState: UIState.ConfirmPopup }));
+      
+    } catch (error: any) {
+      console.error("Deposit failed:", error);
+      
+      let errorMessage = "Deposit failed";
+      if (error?.message?.includes("User rejected") || 
+          error?.message?.includes("User cancelled")) {
+        errorMessage = "User rejected action";
+      } else if (error?.message) {
+        errorMessage = "Deposit Fail: " + getFirst10Words(error.message);
+      }
+      
+      dispatch(setPopupDescription({
+        popupDescription: errorMessage,
+      }));
+      dispatch(setUIState({ uIState: UIState.ErrorPopup }));
     }
   };
 
   const onClickConfirm = () => {
     if (uIState == UIState.DepositPopup) {
-      deposit(amountString);
+      handleDeposit(amountString);
     }
   };
 

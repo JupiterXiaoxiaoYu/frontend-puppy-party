@@ -1,34 +1,22 @@
-import { configureStore, ThunkAction, Action } from '@reduxjs/toolkit';
-import { AccountSliceReducer } from 'zkwasm-minirollup-browser';
-import endpointReducer from "../data/endpoint";
+import { ThunkAction, Action } from '@reduxjs/toolkit';
+import { createDelphinusStore } from 'zkwasm-minirollup-browser';
 import stateReducer from "../data/state";
 import uiReducer from "../data/ui";
 import memeDatasReducer from "../data/memeDatas";
 
-export const store = configureStore({
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['acccount/deriveL2Account/fulfilled'],
-        ignoredActionPaths: ['payload.web3', 'payload.seed', 'payload.injector', 'meta.arg.cmd'],
-        ignoredPaths: [
-          "acccount/fetchAccount/fulfilled",
-          "account.l1Account.web3",
-          "endpoint.zkWasmServiceHelper",
-          "status.config.latest_server_checksum",
-          "account.l2account",
-          "puppyParty.properties.player.data.action"
-        ],
-      },
-    }),
-  reducer: {
-    account: AccountSliceReducer,
-    endpoint: endpointReducer,
+// 使用 createDelphinusStore，让它自动处理 account reducer
+export const store = createDelphinusStore(
+  {
+    // zkwasm 会自动添加 account reducer，我们只需要添加自定义的
     state: stateReducer,
     uiux: uiReducer,
     memeDatas: memeDatasReducer,
   },
-});
+  [], // preloadedState
+  [], // middleware
+  ["state.lastError.payload"], // ignoredActions - 忽略 lastError.payload 的序列化检查
+  [] // ignoredPaths
+);
 
 export type AppDispatch = typeof store.dispatch;
 export type RootState = ReturnType<typeof store.getState>;

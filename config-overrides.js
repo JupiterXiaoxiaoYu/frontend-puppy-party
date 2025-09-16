@@ -14,6 +14,7 @@ module.exports = function override(config, env) {
       "http": require.resolve("stream-http"),
       "https": require.resolve("https-browserify"),
       "os": require.resolve("os-browserify"),
+      "path": require.resolve("path-browserify"),
       "vm": false,
       "url": require.resolve("url")
   })
@@ -23,7 +24,20 @@ module.exports = function override(config, env) {
           process: 'process/browser',
           Buffer: ['buffer', 'Buffer']
       })
-  ])
+  ]);
+
+  // 配置webpack忽略有问题的包
+  config.resolve.alias = {
+    ...config.resolve.alias,
+    '@base-org/account': false
+  };
+  
+  // 或者使用IgnorePlugin忽略这个包
+  config.plugins.push(
+    new webpack.IgnorePlugin({
+      resourceRegExp: /@base-org\/account/
+    })
+  );
 
   /*
   config.plugins = (config.plugins || []).concat([
@@ -35,16 +49,7 @@ module.exports = function override(config, env) {
 
 
 
-  config.module.rules.forEach(rule => {
-    (rule.oneOf || []).forEach(oneOf => {
-      if (oneOf.test && oneOf.test.toString().indexOf('tsx') >= 0) {
-        oneOf.include = [
-              oneOf.include,
-              fs.realpathSync(path.resolve(__dirname, 'node_modules/web3subscriber/', 'src')),
-      ]
-      }
-    })
-  })
+  // web3subscriber配置已移除，使用zkwasm-minirollup-browser替代
 
   const wasmExtensionRegExp = /\.wasm$/;
   config.resolve.extensions.push('.wasm');

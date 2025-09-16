@@ -3,7 +3,7 @@ import Popups from "./Popups";
 import TopMenu from "./TopMenu";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { audioSystem } from "../audio";
-import { AccountSlice } from "zkwasm-minirollup-browser";
+import { useWalletContext } from "zkwasm-minirollup-browser";
 import { getBeat } from "../draw";
 import "./Gameplay.css";
 import StageButtons from "./StageButtons";
@@ -12,8 +12,7 @@ import {
   getDanceTransactionParameter,
   getLotteryransactionParameter,
 } from "../api";
-import { MemeListElement, selectUserState } from "../../data/state";
-import { sendTransaction } from "zkwasm-minirollup-browser/src/connect";
+import { sendTransaction, queryState } from "zkwasm-minirollup-browser";
 import {
   selectGiftboxShake,
   selectProgressReset,
@@ -26,6 +25,12 @@ import {
   setUIState,
   UIState,
 } from "../../data/ui";
+import {
+  selectUserState,
+  selectNullableUserState,
+  setConnectState,
+} from "../../data/state";
+import { ConnectState } from "zkwasm-minirollup-browser";
 import { Scenario } from "../scenario";
 import { selectCurrentMemes, setMemeModelMap } from "../../data/memeDatas";
 import { MemeData, MemeProp } from "../season";
@@ -49,13 +54,25 @@ export enum DanceType {
 
 const Gameplay = () => {
   const dispatch = useAppDispatch();
-  const l2account = useAppSelector(AccountSlice.selectL2Account);
-  const userState = useAppSelector(selectUserState);
+  const { l2Account, playerId } = useWalletContext();
   const uIState = useAppSelector(selectUIState);
+  const userStateNullable = useAppSelector(selectNullableUserState);
   const isCountingDownRef = useRef(false);
-  const progressRef = useRef(userState.player!.data.progress);
-  const displayProgressRef = useRef(userState.player!.data.progress);
-  const [displayProgress, setDisplayProgress] = useState(0);
+  
+  // Critical: 只有在 UserState 存在时才渲染 Gameplay
+  if (!userStateNullable?.player) {
+    return <div>Loading user state...</div>;
+  }
+  
+  // 现在可以安全使用 UserState
+  const playerProgress = userStateNullable.player.data.progress;
+  const playerNonce = BigInt(userStateNullable.player.nonce); // 确保转换为bigint
+  const playerTicket = userStateNullable.player.data.ticket;
+  const playerBalance = userStateNullable.player.data.balance;
+  
+  const progressRef = useRef(playerProgress);
+  const displayProgressRef = useRef(playerProgress);
+  const [displayProgress, setDisplayProgress] = useState(playerProgress);
   const currentMemes = useAppSelector(selectCurrentMemes);
   const currentMemesRef = useRef<MemeProp[]>([]);
   const [scenario, setScenario] = useState(new Scenario(currentMemes));
@@ -140,15 +157,15 @@ const Gameplay = () => {
   };
 
   useEffect(() => {
-    const draw = (): void => {
-      const analyserInfo = audioSystem.play();
+    const draw = async (): Promise<void> => {
+      const analyserInfo = await audioSystem.play();
       if (scenario.status === "play" && analyserInfo != null) {
-        const ratioArray = getBeat(analyserInfo!);
+        const ratioArray = getBeat(analyserInfo);
 
         updateDisplayProgressRef();
 
         scenario.draw(ratioArray, {
-          l2account,
+          l2account: l2Account,
           currentMemes: currentMemesRef.current,
           giftboxShake: giftboxShakeRef.current,
         });
@@ -188,30 +205,51 @@ const Gameplay = () => {
     }
   }, [progressReset]);
 
+  // 使用正确的 UserState 初始化游戏状态
   useEffect(() => {
-    progressRef.current = userState.player!.data.progress;
+    progressRef.current = playerProgress;
     dispatch(setProgressReset({ progressReset: false }));
-    isDanceButtonCoolDownGlobalRef.current =
-      userState.state.counter * SERVER_TICK_TO_SECOND <
-      userState.player!.data.last_action_timestamp + COOL_DOWN;
-  }, [userState]);
+    isDanceButtonCoolDownGlobalRef.current = false;
+  }, [playerProgress]);
 
   function handleCancelRewards() {
-    dispatch(
-      sendTransaction(
-        getLotteryransactionParameter(
-          l2account!,
-          BigInt(userState.player!.nonce)
-        )
-      )
+    // 使用正确的 nonce 值从 UserState
+    const nonce = playerNonce;
+    console.log('🎰 Lottery:', { nonce: nonce.toString() });
+    
+    const lotteryParams = getLotteryransactionParameter(
+      l2Account!,
+      nonce
     );
+    
+    console.log('🎰 Lottery transaction parameters:', lotteryParams);
+
+    dispatch(sendTransaction(lotteryParams)).then((action) => {
+      console.log('🎰 Lottery transaction action result:', action);
+      
+      if (sendTransaction.fulfilled.match(action)) {
+        console.log('🎰 Lottery transaction successful:', action.payload);
+        
+        // 🔄 重新查询用户状态
+        if (l2Account) {
+          console.log('🎰 Refreshing user state after lottery...');
+          dispatch(queryState(l2Account.getPrivateKey()));
+        }
+      } else if (sendTransaction.rejected.match(action)) {
+        console.error('🎰 Lottery transaction failed:', action);
+      }
+    }).catch(error => {
+      console.error('🎰 Lottery transaction error:', error);
+    });
   }
 
   const checkDanceButtonCoolDownAndTicketAmount = () => {
     if (isDanceButtonCoolDownLocalRef.current) {
       return false;
     }
-    if (userState.player!.data.ticket == 0) {
+    // 使用正确的 ticket 检查逻辑从 UserState
+    const hasTicket = playerTicket > 0;
+    if (!hasTicket) {
       dispatch(
         setPopupDescription({
           popupDescription: "Not Enough Ticket",
@@ -239,20 +277,49 @@ const Gameplay = () => {
     if (checkDanceButtonCoolDownAndTicketAmount()) {
       startDance(DanceType.Vote);
 
-      dispatch(
-        sendTransaction(
-          getDanceTransactionParameter(
-            l2account!,
-            DanceType.Vote,
-            currentMemes[targetMemeIndex].data.id,
-            BigInt(userState.player!.nonce)
-          )
-        )
-      ).then(async (action) => {
+      // 使用正确的 nonce 值从 UserState
+      const nonce = playerNonce;
+      console.log('🗳️ Vote:', { memeId: currentMemes[targetMemeIndex].data.id, nonce: nonce.toString() });
+      
+      const voteParams = getDanceTransactionParameter(
+        l2Account!,
+        DanceType.Vote,
+        currentMemes[targetMemeIndex].data.id,
+        nonce
+      );
+      
+      // 简化的参数检查
+      console.log('🗳️ Vote params:', { nonce: nonce.toString(), memeId: currentMemes[targetMemeIndex].data.id });
+
+      dispatch(sendTransaction(voteParams)).then(async (action) => {
+        console.log('🗳️ Vote transaction action result:', action);
+        
         if (sendTransaction.fulfilled.match(action)) {
+          console.log('🗳️ Vote transaction successful:', action.payload);
+          
+          // 🔄 更新meme数据和用户状态
           const memeModelMap = await getMemeModelMap();
           dispatch(setMemeModelMap({ memeModelMap }));
+          
+          // 🔄 重新查询用户状态
+          if (l2Account) {
+            console.log('🗳️ Refreshing user state after vote...');
+            dispatch(queryState(l2Account.getPrivateKey()));
+          }
+        } else if (sendTransaction.rejected.match(action)) {
+          console.error('🗳️ Vote transaction failed:', {
+            error: action.error,
+            payload: action.payload,
+            meta: action.meta
+          });
+          
+          // 尝试获取更多错误信息
+          if (action.payload && typeof action.payload === 'object') {
+            console.error('🗳️ Detailed error:', (action.payload as any).message || action.payload);
+          }
         }
+      }).catch(error => {
+        console.error('🗳️ Vote transaction catch error:', error);
       });
     }
   };
@@ -267,20 +334,39 @@ const Gameplay = () => {
     if (checkDanceButtonCoolDownAndTicketAmount()) {
       startDance(DanceType.Collect);
 
-      dispatch(
-        sendTransaction(
-          getDanceTransactionParameter(
-            l2account!,
-            DanceType.Collect,
-            currentMemes[targetMemeIndex].data.id,
-            BigInt(userState.player!.nonce)
-          )
-        )
-      ).then(async (action) => {
+      // 使用正确的 nonce 值从 UserState
+      const nonce = playerNonce;
+      console.log('🎁 Collect:', { memeId: currentMemes[targetMemeIndex].data.id, nonce: nonce.toString() });
+      
+      const collectParams = getDanceTransactionParameter(
+        l2Account!,
+        DanceType.Collect,
+        currentMemes[targetMemeIndex].data.id,
+        nonce
+      );
+      
+      console.log('🎁 Collect transaction parameters:', collectParams);
+
+      dispatch(sendTransaction(collectParams)).then(async (action) => {
+        console.log('🎁 Collect transaction action result:', action);
+        
         if (sendTransaction.fulfilled.match(action)) {
+          console.log('🎁 Collect transaction successful:', action.payload);
+          
+          // 🔄 更新meme数据和用户状态
           const memeModelMap = await getMemeModelMap();
           dispatch(setMemeModelMap({ memeModelMap }));
+          
+          // 🔄 重新查询用户状态
+          if (l2Account) {
+            console.log('🎁 Refreshing user state after collect...');
+            dispatch(queryState(l2Account.getPrivateKey()));
+          }
+        } else if (sendTransaction.rejected.match(action)) {
+          console.error('🎁 Collect transaction failed:', action);
         }
+      }).catch(error => {
+        console.error('🎁 Collect transaction error:', error);
       });
     }
   };
@@ -289,20 +375,39 @@ const Gameplay = () => {
     if (checkDanceButtonCoolDownAndTicketAmount()) {
       startDance(DanceType.Comment);
 
-      dispatch(
-        sendTransaction(
-          getDanceTransactionParameter(
-            l2account!,
-            DanceType.Comment,
-            currentMemes[targetMemeIndex].data.id,
-            BigInt(userState.player!.nonce)
-          )
-        )
-      ).then(async (action) => {
+      // 使用正确的 nonce 值从 UserState
+      const nonce = playerNonce;
+      console.log('💬 Comment:', { memeId: currentMemes[targetMemeIndex].data.id, nonce: nonce.toString() });
+      
+      const commentParams = getDanceTransactionParameter(
+        l2Account!,
+        DanceType.Comment,
+        currentMemes[targetMemeIndex].data.id,
+        nonce
+      );
+      
+      console.log('💬 Comment transaction parameters:', commentParams);
+
+      dispatch(sendTransaction(commentParams)).then(async (action) => {
+        console.log('💬 Comment transaction action result:', action);
+        
         if (sendTransaction.fulfilled.match(action)) {
+          console.log('💬 Comment transaction successful:', action.payload);
+          
+          // 🔄 更新meme数据和用户状态
           const memeModelMap = await getMemeModelMap();
           dispatch(setMemeModelMap({ memeModelMap }));
+          
+          // 🔄 重新查询用户状态
+          if (l2Account) {
+            console.log('💬 Refreshing user state after comment...');
+            dispatch(queryState(l2Account.getPrivateKey()));
+          }
+        } else if (sendTransaction.rejected.match(action)) {
+          console.error('💬 Comment transaction failed:', action);
         }
+      }).catch(error => {
+        console.error('💬 Comment transaction error:', error);
       });
     }
   };

@@ -23,6 +23,7 @@ import {
   selectAllMemes,
   selectCurrentMemes,
 } from "../../data/memeDatas";
+import { MemeProp } from "../season";
 import WelcomeMeme from "./WelcomeMeme";
 import PageSelector from "./PageSelector";
 import ConnectWalletButton from "./buttons/ConnectWalletButton";
@@ -94,7 +95,7 @@ const WelcomePage = ({ isLogin, onLogin, onStartGame }: Props) => {
   };
 
   const onClickMeme = (memeId: number) => {
-    if (currentMemeProps.find((memeProp) => memeProp.data.id == memeId)) {
+    if (currentMemeProps.find((memeProp: MemeProp) => memeProp.data.id == memeId)) {
       dispatch(removeCurrentMemeId({ memeId }));
     } else {
       dispatch(addCurrentMemeId({ memeId }));
@@ -186,7 +187,7 @@ const WelcomePage = ({ isLogin, onLogin, onStartGame }: Props) => {
                   currentPage * amountPerPage,
                   (currentPage + 1) * amountPerPage
                 )
-                .map((memeProp, index) => (
+                .map((memeProp: MemeProp, index: number) => (
                   <MemeRankingIcon
                     key={index}
                     height={memeRankingIconElementWidth}
@@ -196,7 +197,7 @@ const WelcomePage = ({ isLogin, onLogin, onStartGame }: Props) => {
                     rank={memeProp.model.rank}
                     isSelect={
                       currentMemeProps.find(
-                        (meme) => meme.data.id == memeProp.data.id
+                        (meme: MemeProp) => meme.data.id == memeProp.data.id
                       )
                         ? true
                         : false
@@ -208,7 +209,7 @@ const WelcomePage = ({ isLogin, onLogin, onStartGame }: Props) => {
           </div>
         </div>
         <div className="welcome-page-meme-grid">
-          {currentMemeProps.map((memeProp, index) => (
+          {currentMemeProps.map((memeProp: MemeProp, index: number) => (
             <WelcomeMeme key={index} index={index} meme={memeProp} />
           ))}
         </div>

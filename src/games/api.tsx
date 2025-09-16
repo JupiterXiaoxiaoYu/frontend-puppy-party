@@ -1,7 +1,7 @@
 import BN from "bn.js";
-import { AccountSlice } from "zkwasm-minirollup-browser";
 import { DanceType } from "./components/Gameplay";
-import { createWithdrawCommand, createCommand } from "zkwasm-minirollup-rpc";
+import { createCommand } from "zkwasm-minirollup-rpc";
+import { L2AccountInfo, L1AccountInfo } from "zkwasm-minirollup-browser";
 
 const CREATE_PLAYER = 1n;
 const VOTE = 2n;
@@ -21,20 +21,20 @@ function bytesToHex(bytes: Array<number>): string {
 }
 
 export function getCreatePlayerTransactionParameter(
-  l2account: AccountSlice.L2AccountInfo,
-  nonce: bigint
+  l2account: L2AccountInfo,
+  nonce: bigint | number
 ) {
   return {
-    cmd: createCommand(CREATE_PLAYER, nonce, [0n, 0n, 0n]),
+    cmd: createCommand(BigInt(nonce), CREATE_PLAYER, [0n, 0n, 0n]),
     prikey: l2account.getPrivateKey(),
   };
 }
 
 export function getDanceTransactionParameter(
-  l2account: AccountSlice.L2AccountInfo,
+  l2account: L2AccountInfo,
   danceType: DanceType,
   memeId: number,
-  nonce: bigint
+  nonce: bigint | number
 ) {
   const danceCommand =
     danceType == DanceType.Vote
@@ -48,27 +48,31 @@ export function getDanceTransactionParameter(
     throw new Error("Invalid dance type");
   }
 
+  const nonceAsBigInt = BigInt(nonce);
+  const memeIdAsBigInt = BigInt(memeId);
+  const cmd = createCommand(nonceAsBigInt, danceCommand, [memeIdAsBigInt]);
+
   return {
-    cmd: createCommand(nonce, danceCommand, [BigInt(memeId)]),
+    cmd,
     prikey: l2account.getPrivateKey(),
   };
 }
 
 export function getLotteryransactionParameter(
-  l2account: AccountSlice.L2AccountInfo,
-  nonce: bigint
+  l2account: L2AccountInfo,
+  nonce: bigint | number
 ) {
   return {
-    cmd: createCommand(nonce, LOTTERY, []),
+    cmd: createCommand(BigInt(nonce), LOTTERY, []),
     prikey: l2account!.getPrivateKey(),
   };
 }
 
 export function getWithdrawTransactionParameter(
-  l1account: AccountSlice.L1AccountInfo,
-  l2account: AccountSlice.L2AccountInfo,
+  l1account: L1AccountInfo,
+  l2account: L2AccountInfo,
   amount: bigint,
-  nonce: bigint
+  nonce: bigint | number
 ) {
   const address = l1account.address.slice(2);
   const addressBN = new BN(address, 16);
@@ -80,7 +84,7 @@ export function getWithdrawTransactionParameter(
   );
 
   return {
-    cmd: createCommand(nonce, WITHDRAW, [
+    cmd: createCommand(BigInt(nonce), WITHDRAW, [
       (firstLimb << 32n) + amount,
       sndLimb,
       thirdLimb,
@@ -90,22 +94,22 @@ export function getWithdrawTransactionParameter(
 }
 
 export function getStakeTransactionParameter(
-  l2account: AccountSlice.L2AccountInfo,
+  l2account: L2AccountInfo,
   memeId: number,
   amount: number,
-  nonce: bigint
+  nonce: bigint | number
 ) {
   return {
-    cmd: createCommand(nonce, STAKE, [BigInt(memeId), BigInt(amount)]),
+    cmd: createCommand(BigInt(nonce), STAKE, [BigInt(memeId), BigInt(amount)]),
     prikey: l2account.getPrivateKey(),
   };
 }
 
 export function getWithdrawLotteryTransactionParameter(
-  l1account: AccountSlice.L1AccountInfo,
-  l2account: AccountSlice.L2AccountInfo,
+  l1account: L1AccountInfo,
+  l2account: L2AccountInfo,
   amount: bigint,
-  nonce: bigint
+  nonce: bigint | number
 ) {
   const address = l1account.address.slice(2);
   const addressBN = new BN(address, 16);
@@ -117,7 +121,7 @@ export function getWithdrawLotteryTransactionParameter(
   );
 
   return {
-    cmd: createCommand(nonce, WITHDRAW_LOTTERY, [
+    cmd: createCommand(BigInt(nonce), WITHDRAW_LOTTERY, [
       (firstLimb << 32n) + amount,
       sndLimb,
       thirdLimb,

@@ -73,24 +73,32 @@ export const memeDatasSlice = createSlice({
   },
 });
 
-export const selectAllMemes = (state: RootState) =>
-  state.memeDatas.seasonData.memes.filter((data) => state.memeDatas.currentMemeIds.includes(data.id))
-  .concat(state.memeDatas.seasonData.memes.filter((data) => !state.memeDatas.currentMemeIds.includes(data.id)))
-  .map((data) => {
-    return {
+export const selectAllMemes = (state: RootState) => {
+  if (!state.memeDatas?.seasonData?.memes) {
+    return [];
+  }
+  
+  return state.memeDatas.seasonData.memes
+    .filter((data: MemeData) => state.memeDatas.currentMemeIds.includes(data.id))
+    .concat(state.memeDatas.seasonData.memes.filter((data: MemeData) => !state.memeDatas.currentMemeIds.includes(data.id)))
+    .map((data: MemeData) => ({
       data: data,
       model: state.memeDatas.memeModelMap
         ? state.memeDatas.memeModelMap[data.id] ?? emptyMemeModel
         : emptyMemeModel,
-    } as MemeProp;
-  });
-export const selectCurrentMemes = (state: RootState) =>
-  state.memeDatas.currentMemeIds.map((id) => {
-    return {
-      data: state.memeDatas.memeDataMap[id] ?? emptyMemeData,
-      model: state.memeDatas.memeModelMap[id] ?? emptyMemeModel,
-    } as MemeProp;
-  });
+    } as MemeProp));
+};
+
+export const selectCurrentMemes = (state: RootState) => {
+  if (!state.memeDatas?.currentMemeIds) {
+    return [];
+  }
+  
+  return state.memeDatas.currentMemeIds.map((id: number) => ({
+    data: state.memeDatas.memeDataMap?.[id] ?? emptyMemeData,
+    model: state.memeDatas.memeModelMap?.[id] ?? emptyMemeModel,
+  } as MemeProp));
+};
 
 export const { setSeasonData, setMemeModelMap, addCurrentMemeId, removeCurrentMemeId, fillCurrentMemeIds } =
   memeDatasSlice.actions;

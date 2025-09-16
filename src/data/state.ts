@@ -160,10 +160,15 @@ export const propertiesSlice = createSlice({
 
 export const selectUIState = (state: RootState) => state.puppyParty.properties.uIState;
 export const selectGlobalTimer = (state: RootState) => state.puppyParty.properties.globalTimer;
-export const selectNonce = (state: RootState) => BigInt(state.puppyParty.properties.player.nonce);
+export const selectNonce = (state: RootState) => {
+  if (!state.state.userState?.player?.nonce) {
+    throw new Error('Player nonce not available - player may not exist');
+  }
+  return BigInt(state.state.userState.player.nonce);
+};
 export const selectMemeList = (state: RootState) => state.puppyParty.properties.memeList;
 export const selectBalance = (state: RootState) => state.puppyParty.properties.player.data.balance;
-export const selectTicket = (state: RootState) => state.puppyParty.properties.player.data.ticket ?? 0;
+export const selectTicket = (state: RootState) => state.puppyParty.properties.player.data.ticket;
 export const selectLotteryInfo = (state: RootState) => state.puppyParty.properties.player.data.lottery_info;
 export const selectLotteryInfoDiff = (state: RootState) => state.puppyParty.properties.lotteryInfoDiff;
 export const selectAction = (state: RootState) => state.puppyParty.properties.player.data.action;

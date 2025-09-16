@@ -1,6 +1,6 @@
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import "./LotteryHeatPopup.css";
-import { AccountSlice } from "zkwasm-minirollup-browser";
+import { useWalletContext } from "zkwasm-minirollup-browser";
 import GiftboxConfirmButton from "../buttons/GiftboxConfirmButton";
 import sponsor_image from "../../images/animations/sponsor.png";
 import { getWithdrawLotteryTransactionParameter } from "../../api";
@@ -11,21 +11,20 @@ import {
   UIState,
 } from "../../../data/ui";
 import { selectUserState } from "../../../data/state";
-import { sendTransaction } from "zkwasm-minirollup-browser/src/connect";
+import { sendTransaction } from "zkwasm-minirollup-browser";
 
 const LotteryHeatPopup = () => {
   const dispatch = useAppDispatch();
   const userState = useAppSelector(selectUserState);
   const uIState = useAppSelector(selectUIState);
-  const l2account = useAppSelector(AccountSlice.selectL2Account);
-  const l1account = useAppSelector(AccountSlice.selectL1Account);
+  const { l1Account, l2Account } = useWalletContext();
 
   const withdrawLottery = () => {
     dispatch(
       sendTransaction(
         getWithdrawLotteryTransactionParameter(
-          l1account!,
-          l2account!,
+          l1Account!,
+          l2Account!,
           BigInt(userState.player!.data.lottery_info),
           BigInt(userState.player!.nonce)
         )
