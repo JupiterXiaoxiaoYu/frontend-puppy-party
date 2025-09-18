@@ -125,7 +125,7 @@ export function ModernLoadingController() {
     try {
       console.log('🎮 Creating new player...');
       const createPlayerAction = await dispatch(sendTransaction(
-        getCreatePlayerTransactionParameter(l2Account, BigInt(0))
+        getCreatePlayerTransactionParameter(l2Account, 0n)
       ));
       
       if (sendTransaction.fulfilled.match(createPlayerAction)) {
@@ -320,7 +320,7 @@ export function ModernLoadingController() {
         console.log("🎮 Player not found - creating new player...");
         
         const createAction = await dispatch(sendTransaction(
-          getCreatePlayerTransactionParameter(l2Account, BigInt(0))
+          getCreatePlayerTransactionParameter(l2Account, 0n)
         ));
         
         if (sendTransaction.fulfilled.match(createAction)) {

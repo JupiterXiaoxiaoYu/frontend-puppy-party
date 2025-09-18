@@ -77,7 +77,7 @@ const WithdrawPopup = () => {
         dispatch(setUIState({ uIState: UIState.ErrorPopup }));
       } else {
         dispatch(setUIState({ uIState: UIState.QueryWithdraw }));
-        withdrawRewards(BigInt(amount), userState.player!.nonce);
+        withdrawRewards(BigInt(amount), BigInt(userState.player!.nonce));
       }
     } catch (e) {
       console.log("Error at withdraw " + e);

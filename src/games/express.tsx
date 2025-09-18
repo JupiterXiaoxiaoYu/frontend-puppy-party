@@ -1,9 +1,8 @@
 import axios from "axios";
 import { MemeModel } from "./season";
-import { rpcURL } from "./api";
 
 const instance = axios.create({
-  baseURL: rpcURL,
+  baseURL: process.env.REACT_APP_URL,
   headers: {
     "Content-Type": "multipart/form-data",
   },

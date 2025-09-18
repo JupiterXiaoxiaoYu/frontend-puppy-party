@@ -35,7 +35,7 @@ const StakePopup = () => {
       l2Account!,
       currentMemes[targetMemeIndex].data.id,
       amount,
-      userState.player!.nonce
+      BigInt(userState.player!.nonce)
     );
     
     console.log('💰 Stake transaction parameters:', stakeParams);

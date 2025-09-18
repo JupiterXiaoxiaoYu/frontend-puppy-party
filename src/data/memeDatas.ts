@@ -83,9 +83,9 @@ export const memeDatasSlice = createSlice({
 });
 
 export const selectAllMemes = (state: RootState) =>
-  state.memeDatas.seasonData.memes.filter((data) => state.memeDatas.currentMemeIds.includes(data.id))
-  .concat(state.memeDatas.seasonData.memes.filter((data) => !state.memeDatas.currentMemeIds.includes(data.id)))
-  .map((data) => {
+  state.memeDatas.seasonData.memes.filter((data: MemeData) => state.memeDatas.currentMemeIds.includes(data.id))
+  .concat(state.memeDatas.seasonData.memes.filter((data: MemeData) => !state.memeDatas.currentMemeIds.includes(data.id)))
+  .map((data: MemeData) => {
     return {
       data: data,
       model: state.memeDatas.memeModelMap
@@ -94,7 +94,7 @@ export const selectAllMemes = (state: RootState) =>
     } as MemeProp;
   });
 export const selectCurrentMemes = (state: RootState) =>
-  state.memeDatas.currentMemeIds.map((id) => {
+  state.memeDatas.currentMemeIds.map((id: number) => {
     return {
       data: state.memeDatas.memeDataMap[id] ?? emptyMemeData,
       model: state.memeDatas.memeModelMap[id] ?? emptyMemeModel,
