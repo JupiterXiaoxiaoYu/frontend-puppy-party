@@ -8,12 +8,18 @@ import {
   SeasonData,
   emptyMemeModel,
   MemeProp,
+  StakeInfo,
 } from "../games/season";
+
+import {
+    queryStake
+} from "../games/api";
 
 interface MemeDatasState {
   seasonData: SeasonData;
   memeDataMap: { [key: number]: MemeData };
   memeModelMap: { [key: number]: MemeModel };
+  memeStakeMap: { [key: number]: number };
   currentMemeIds: number[];
 }
 
@@ -21,6 +27,7 @@ const initialState: MemeDatasState = {
   seasonData: emptySeasonData,
   memeDataMap: {},
   memeModelMap: {},
+  memeStakeMap: {},
   currentMemeIds: Array(12).fill(0),
 };
 
@@ -59,40 +66,40 @@ export const memeDatasSlice = createSlice({
       );
     },
     fillCurrentMemeIds: (state, action) => {
-      // 默认选择所有可用的memes
+      // 默认选择所有可用的memes (保留HEAD的修复)
       const allMemeIds = state.seasonData.memes.map((memeData) => memeData.id);
       allMemeIds.sort(() => Math.random() - 0.5);
       state.currentMemeIds = allMemeIds.slice(0, 12);
     },
   },
+  extraReducers: (builder) => {
+      builder
+      .addCase(queryStake.fulfilled, (state, action) => {
+          for (const r of action.payload) {
+              state.memeStakeMap[Number(r.object_index)] = r.data[0];
+          }
+      })
+  }
 });
 
-export const selectAllMemes = (state: RootState) => {
-  if (!state.memeDatas?.seasonData?.memes) {
-    return [];
-  }
-  
-  return state.memeDatas.seasonData.memes
-    .filter((data: MemeData) => state.memeDatas.currentMemeIds.includes(data.id))
-    .concat(state.memeDatas.seasonData.memes.filter((data: MemeData) => !state.memeDatas.currentMemeIds.includes(data.id)))
-    .map((data: MemeData) => ({
+export const selectAllMemes = (state: RootState) =>
+  state.memeDatas.seasonData.memes.filter((data) => state.memeDatas.currentMemeIds.includes(data.id))
+  .concat(state.memeDatas.seasonData.memes.filter((data) => !state.memeDatas.currentMemeIds.includes(data.id)))
+  .map((data) => {
+    return {
       data: data,
       model: state.memeDatas.memeModelMap
         ? state.memeDatas.memeModelMap[data.id] ?? emptyMemeModel
         : emptyMemeModel,
-    } as MemeProp));
-};
-
-export const selectCurrentMemes = (state: RootState) => {
-  if (!state.memeDatas?.currentMemeIds) {
-    return [];
-  }
-  
-  return state.memeDatas.currentMemeIds.map((id: number) => ({
-    data: state.memeDatas.memeDataMap?.[id] ?? emptyMemeData,
-    model: state.memeDatas.memeModelMap?.[id] ?? emptyMemeModel,
-  } as MemeProp));
-};
+    } as MemeProp;
+  });
+export const selectCurrentMemes = (state: RootState) =>
+  state.memeDatas.currentMemeIds.map((id) => {
+    return {
+      data: state.memeDatas.memeDataMap[id] ?? emptyMemeData,
+      model: state.memeDatas.memeModelMap[id] ?? emptyMemeModel,
+    } as MemeProp;
+  });
 
 export const { setSeasonData, setMemeModelMap, addCurrentMemeId, removeCurrentMemeId, fillCurrentMemeIds } =
   memeDatasSlice.actions;

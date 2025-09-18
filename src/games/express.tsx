@@ -1,13 +1,12 @@
 import axios from "axios";
 import { MemeModel } from "./season";
-
-// Get the current URL components
-const currentLocation = window.location;
-const protocol = currentLocation.protocol; // e.g., 'http:' or 'https:'
-const hostname = currentLocation.hostname; // e.g., 'sinka' or 'localhost'
+import { rpcURL } from "./api";
 
 const instance = axios.create({
-  baseURL: `https://rpc.memedisco.zkwasm.ai`,
+  baseURL: rpcURL,
+  headers: {
+    "Content-Type": "multipart/form-data",
+  },
 });
 
 export async function getMemeModelMap(): Promise<{ [key: number]: MemeModel }> {

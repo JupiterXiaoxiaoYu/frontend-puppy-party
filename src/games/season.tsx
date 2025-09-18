@@ -40,3 +40,8 @@ export interface MemeProp {
   data: MemeData;
   model: MemeModel;
 }
+
+export interface StakeInfo {
+  stake: number;
+  timestamp: number;
+}
