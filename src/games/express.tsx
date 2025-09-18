@@ -8,9 +8,6 @@ const hostname = currentLocation.hostname; // e.g., 'sinka' or 'localhost'
 
 const instance = axios.create({
   baseURL: `https://rpc.memedisco.zkwasm.ai`,
-  headers: {
-    "Content-Type": "multipart/form-data",
-  },
 });
 
 export async function getMemeModelMap(): Promise<{ [key: number]: MemeModel }> {
@@ -43,11 +40,11 @@ export async function uploadImage(
 async function getRequest(path: string) {
   try {
     const response = await instance.get(path);
-    if (response.status === 200) {
+    if (response.status >= 200 && response.status < 300) {
       const jsonResponse = response.data;
       return jsonResponse;
     } else {
-      throw "Post error at " + path + " : " + response.status;
+      throw "Get error at " + path + " : " + response.status;
     }
   } catch (error) {
     throw "Unknown error at " + path + " : " + error;
@@ -57,7 +54,7 @@ async function getRequest(path: string) {
 async function postRequest(path: string, formData: FormData) {
   try {
     const response = await instance.post(path, formData);
-    if (response.status === 200) {
+    if (response.status >= 200 && response.status < 300) {
       const jsonResponse = response.data;
       return jsonResponse;
     } else {

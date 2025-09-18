@@ -312,6 +312,8 @@ export function ModernLoadingController() {
       
       if (queryState.fulfilled.match(action) && action.payload.player) {
         console.log("🎮 Player exists - starting gameplay");
+        // 确保所有memes被选中
+        dispatch(fillCurrentMemeIds({}));
         setGameState(prev => ({ ...prev, isGameReady: true }));
       } else {
         // 用户不存在或查询失败，创建新玩家
@@ -325,6 +327,8 @@ export function ModernLoadingController() {
           // 玩家创建成功，重新查询状态
           await dispatch(queryState(l2Account.getPrivateKey()));
           console.log("🎮 Player created - starting gameplay");
+          // 确保所有memes被选中
+          dispatch(fillCurrentMemeIds({}));
           setGameState(prev => ({ ...prev, isGameReady: true }));
         } else {
           throw new Error("Failed to create player");

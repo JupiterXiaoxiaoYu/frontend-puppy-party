@@ -59,16 +59,10 @@ export const memeDatasSlice = createSlice({
       );
     },
     fillCurrentMemeIds: (state, action) => {
-      const availableMemeIds = state.seasonData.memes
-        .filter((memeData) => !state.currentMemeIds.includes(memeData.id))
-        .map((memeData) => memeData.id);
-      availableMemeIds.sort(() => Math.random() - 0.5);
-      const currentNotEmptyMemeIds = state.currentMemeIds.filter(
-        (id) => id !== 0
-      );
-      state.currentMemeIds = currentNotEmptyMemeIds.concat(
-        availableMemeIds.slice(0, 12 - currentNotEmptyMemeIds.length)
-      );
+      // 默认选择所有可用的memes
+      const allMemeIds = state.seasonData.memes.map((memeData) => memeData.id);
+      allMemeIds.sort(() => Math.random() - 0.5);
+      state.currentMemeIds = allMemeIds.slice(0, 12);
     },
   },
 });
